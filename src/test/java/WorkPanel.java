@@ -6,6 +6,7 @@ import org.openqa.selenium.chrome.ChromeOptions;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.time.Duration;
 import java.util.List;
 
 public class WorkPanel extends JPanel {
@@ -18,7 +19,8 @@ public class WorkPanel extends JPanel {
     public static final String FORMAT2 = "05";
 
     private ImageIcon background;
-    private JTextField phoneNumber, text;
+    private JTextField phoneNumber;
+    private JTextField text;
     private JLabel phoneNumerText, textLabe;
 
     public WorkPanel(int x, int y, int width, int height) {
@@ -55,9 +57,12 @@ public class WorkPanel extends JPanel {
                         "wrong number",
                         "phone value missing",
                         JOptionPane.ERROR_MESSAGE);
-            }
-            else {
-                actionPerformed(event);
+            } else {
+                try {
+                    actionPerformed(event);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
 
@@ -66,7 +71,7 @@ public class WorkPanel extends JPanel {
 
     }
 
-    private void actionPerformed(ActionEvent event) {
+    private void actionPerformed(ActionEvent event) throws InterruptedException {
         System.setProperty("webdriver.chrome.driver", "C:\\Users\\ADMIN\\Downloads\\chromedriver_win32 (1)\\chromedriver.exe");
         ChromeOptions chromeOptions = new ChromeOptions();
         chromeOptions.addArguments("C:\\Users\\ADMIN\\AppData\\Local\\Temp\\scoped_dir11132_1172441705\\Default");
@@ -84,14 +89,66 @@ public class WorkPanel extends JPanel {
                 isConnected = true;
             }
         }
-        afterConnection(isConnected, driver);
+        afterConnection(driver);
     }
 
-    public void afterConnection (boolean isConnected, ChromeDriver driver) {
-        if (isConnected){
-            driver.navigate().to("https://api.whatsapp.com/send?phone=" + phoneNumber.getText());
+    public void copyMessage(ChromeDriver driver) {
+        boolean inChat = false;
+        while (!inChat) {
+            List<WebElement> newWebElement = driver.findElements
+                    (By.xpath
+                            ("/html/body/div[1]/div/div/div[4]/div/footer/div[1]/div/span[2]/div/div[2]/div[1]/div/div[2]"));
+            driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(8));
+            if (!newWebElement.isEmpty()) {
+                newWebElement.get(0).sendKeys(text.getText());
+                inChat = true;
+            }
         }
     }
+
+    public void sendMessage(ChromeDriver driver){
+        boolean elementExists = false;
+        while (!elementExists){
+            List<WebElement> webElements = driver.findElements
+                    (By.xpath("/html/body/div[1]/div/div/div[4]/div/footer/div[1]/div/span[2]/div/div[2]/div[2]/button"));
+            if (!webElements.isEmpty()){
+                webElements.get(0).click();
+                elementExists = true;
+            }
+        }
+    }
+
+    public boolean msgCheck (ChromeDriver driver){
+        boolean msgCheck = false;
+        boolean msgWasRead = false;
+            while (!msgCheck){
+                List<WebElement> messageCheck = driver.findElements(By.className("_2wUmf _21bY5 message-out focusable-list-item"));
+                if (!messageCheck.isEmpty()){
+                    msgCheck = true;
+                    msgWasRead = true;
+
+                }
+            }
+        return msgWasRead;
+    }
+
+    public void afterConnection(ChromeDriver driver) {
+        if (this.phoneNumber.getText().substring(0, 2).equals(FORMAT2)) {
+            driver.get("https://web.whatsapp.com/send?phone=972" +
+                    this.phoneNumber.getText().substring(1, this.phoneNumber.getText().length()));
+            copyMessage(driver);
+            sendMessage(driver);
+            System.out.println(msgCheck(driver));
+        }
+        else {
+            driver.get("https://web.whatsapp.com/send?phone=" + this.phoneNumber.getText());
+            copyMessage(driver);
+            sendMessage(driver);
+            System.out.println(msgCheck(driver));
+        }
+
+    }
+
 
     protected void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
@@ -114,3 +171,5 @@ public class WorkPanel extends JPanel {
         return validPhoneNum;
     }
 }
+
+//
